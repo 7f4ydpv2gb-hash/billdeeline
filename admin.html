@@ -180,13 +180,20 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 
 async function approve(id,bizId,plan){
   const btn=event.target;btn.disabled=true;btn.textContent='กำลังอนุมัติ…';
+  const secret=sessionStorage.getItem('admin_secret')||prompt('Admin Secret:');
+  if(!secret){btn.disabled=false;btn.textContent='✓ อนุมัติ';return;}
+  sessionStorage.setItem('admin_secret',secret);
   const res=await fetch('/api/approve-payment',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','X-Admin-Secret':secret},
     body:JSON.stringify({payment_id:id,business_id:bizId,plan})
   });
   const json=await res.json().catch(()=>({}));
-  if(!res.ok||json.error){alert('Error: '+JSON.stringify(json.error));btn.disabled=false;btn.textContent='✓ อนุมัติ';return}
+  if(!res.ok||json.error){
+    if(res.status===401){sessionStorage.removeItem('admin_secret');alert('Admin Secret ไม่ถูกต้อง');}
+    else alert('Error: '+JSON.stringify(json.error));
+    btn.disabled=false;btn.textContent='✓ อนุมัติ';return;
+  }
   await loadData();
 }
 
